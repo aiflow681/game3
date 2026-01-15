@@ -1,0 +1,790 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEOSHIFT | 复古大冒险</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- 引入像素字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ffd700;    /* 金币黄 */
+            --danger: #ff4500;     /* 火箭红 */
+            --success: #32cd32;    /* 管道绿 */
+            --sky: #5c94fa;        /* 经典天空蓝 */
+            --brick: #ba4a00;      /* 砖块棕 */
+            --bg-dark: #000000;
+            --surface: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Press Start 2P', 'ZCOOL KuaiLe', cursive;
+            background-color: var(--bg-dark);
+            color: #000;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 复古风格的 Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            background: var(--surface);
+            border-bottom: 6px solid #000;
+            z-index: 100;
+        }
+
+        .pixel-border {
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.2);
+            background: white;
+            padding: 10px;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            padding: 1rem;
+            gap: 1rem;
+            overflow: hidden;
+            position: relative;
+            background: #eee;
+        }
+
+        .sidebar {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { display: none; }
+        }
+
+        .game-container {
+            flex: 1;
+            position: relative;
+            background: var(--sky);
+            border: 6px solid #000;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 10px 10px 0px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated; /* 强制像素化渲染 */
+        }
+
+        .card {
+            background: white;
+            border: 4px solid #000;
+            padding: 1rem;
+            position: relative;
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            bottom: -8px; right: -8px;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.1);
+            z-index: -1;
+        }
+
+        .label-retro {
+            font-size: 10px;
+            background: #000;
+            color: #fff;
+            padding: 4px 8px;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .mobile-controls {
+            position: absolute;
+            bottom: 2rem;
+            left: 1rem;
+            right: 1rem;
+            display: none;
+            justify-content: space-between;
+            z-index: 101;
+            pointer-events: none;
+        }
+
+        .btn-ctrl {
+            width: 70px;
+            height: 70px;
+            background: white;
+            border: 5px solid #000;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            transition: transform 0.1s;
+            pointer-events: auto;
+            box-shadow: 4px 4px 0px #000;
+        }
+
+        .btn-ctrl:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-controls { display: flex; }
+        }
+
+        /* 结算画面 */
+        #game-over {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 20px;
+        }
+
+        .modal {
+            background: white;
+            padding: 2.5rem 1.5rem;
+            border: 8px solid #000;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 15px 15px 0px var(--danger);
+            position: relative;
+            overflow: visible;
+        }
+
+        .modal-title {
+            background: #000;
+            color: #fff;
+            padding: 10px;
+            margin: -3.5rem auto 2rem;
+            width: 80%;
+            border: 4px solid #fff;
+            box-shadow: 0 0 0 4px #000;
+            font-size: 18px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .stat-item {
+            border: 4px solid #000;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+
+        .stat-label {
+            font-size: 8px;
+            color: #888;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .stat-value {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .rank-badge {
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 100px;
+            height: 100px;
+            background: var(--primary);
+            border: 6px solid #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            transform: rotate(15deg);
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .btn-primary {
+            background: var(--success);
+            color: white;
+            border: 4px solid #000;
+            padding: 1.2rem;
+            font-family: inherit;
+            font-size: 14px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            box-shadow: 6px 6px 0px #000;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .btn-primary:active {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0px #000;
+        }
+
+        .hud-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 1.5rem;
+            pointer-events: none;
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            z-index: 10;
+            color: #fff;
+            text-shadow: 3px 3px 0px #000;
+        }
+
+        #ui-score { font-size: 20px; }
+
+        .checkpoint-msg {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 900;
+            color: white;
+            font-size: 1.5rem;
+            text-shadow: 4px 4px 0px #000;
+            pointer-events: none;
+            opacity: 0;
+            text-align: center;
+            z-index: 150;
+        }
+    </style>
+</head>
+<body>
+    <div id="checkpoint-msg" class="checkpoint-msg">保存点存档中...</div>
+
+    <header>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 40px; height: 40px; background: var(--danger); border: 4px solid #000;"></div>
+            <h1 style="font-size: 14px; margin: 0;">超级<span style="color: var(--danger)">大</span>冒险</h1>
+        </div>
+        <div id="distance-tracker" class="pixel-border" style="font-size: 10px;">距离: 0000m</div>
+    </header>
+
+    <main>
+        <div class="sidebar">
+            <div class="card">
+                <span class="label-retro">角色状态</span>
+                <div style="font-size: 10px; line-height: 2;">
+                    • 等级: 99<br>
+                    • 武器: 大铁锤<br>
+                    • 音频: <span id="audio-status" style="color: var(--danger)">未激活</span>
+                </div>
+            </div>
+            <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+                <span class="label-retro">任务日志</span>
+                <div id="feed-container" style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 10px; color: #333; flex: 1; overflow-y: hidden;">
+                </div>
+            </div>
+        </div>
+
+        <section class="game-container">
+            <div class="hud-stats">
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-size: 10px;">金币 x <span id="ui-coins">0</span></span>
+                    <div id="ui-score">000000</div>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 10px;">生命值</span>
+                    <div style="width: 120px; height: 16px; background: #000; border: 2px solid #fff; margin-top: 5px;">
+                        <div id="integrity-bar" style="height: 100%; width: 100%; background: var(--success);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <canvas id="gameCanvas"></canvas>
+
+            <div class="mobile-controls">
+                <div style="display: flex; gap: 1rem;">
+                    <div class="btn-ctrl" id="btn-left"><span class="material-symbols-outlined">arrow_back</span></div>
+                    <div class="btn-ctrl" id="btn-right"><span class="material-symbols-outlined">arrow_forward</span></div>
+                </div>
+                <div class="btn-ctrl" id="btn-jump"><span class="material-symbols-outlined" style="font-size: 2.5rem;">keyboard_double_arrow_up</span></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="game-over">
+        <div class="modal">
+            <div class="modal-title">冒险结算报告</div>
+            <div id="rank-badge" class="rank-badge">C</div>
+            
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <span class="stat-label">冒险距离</span>
+                    <div class="stat-value" id="final-dist">0m</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">同步得分</span>
+                    <div class="stat-value" id="final-score">0</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">收集金币</span>
+                    <div class="stat-value" id="final-coins">0</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">探险时长</span>
+                    <div class="stat-value" id="final-time">0s</div>
+                </div>
+            </div>
+
+            <div style="border-top: 4px dashed #000; padding-top: 15px; margin-bottom: 15px;">
+                <p style="font-size: 10px; color: #555; line-height: 1.5;">胜败乃兵家常事，少侠请重新来过！</p>
+            </div>
+
+            <button class="btn-primary" onclick="restart()">再次挑战</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const uiScore = document.getElementById('ui-score');
+        const uiCoins = document.getElementById('ui-coins');
+        const uiDistance = document.getElementById('distance-tracker');
+        const integrityBar = document.getElementById('integrity-bar');
+        const gameOverModal = document.getElementById('game-over');
+        const feedContainer = document.getElementById('feed-container');
+        const audioStatus = document.getElementById('audio-status');
+        const checkpointMsg = document.getElementById('checkpoint-msg');
+
+        const CONFIG = {
+            gravity: 0.7,
+            friction: 0.85,
+            acceleration: 1.2,
+            maxSpeed: 8,
+            jumpForce: -16,
+            jumpCoyoteTime: 8,
+            jumpBufferTime: 10,
+            maxIntegrity: 100,
+            platformMinW: 120,
+            platformMaxW: 300,
+            gapMin: 100,
+            gapMax: 250,
+            playerWidth: 40,
+            playerHeight: 50,
+            healAmount: 30,
+            checkpointInterval: 15
+        };
+
+        const AudioEngine = {
+            ctx: null, initialized: false,
+            init() {
+                if (this.initialized) return;
+                try {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    this.initialized = true;
+                    audioStatus.innerText = "在线";
+                    audioStatus.style.color = "var(--success)";
+                } catch (e) { console.warn(e); }
+            },
+            play(type) {
+                if (!this.initialized || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                switch (type) {
+                    case 'jump': this.synth(600, 1200, 0.1, 'square'); break;
+                    case 'coin': this.synth(980, 1500, 0.15, 'sine'); break;
+                    case 'hurt': this.synth(400, 100, 0.2, 'sawtooth'); break;
+                    case 'heal': this.synth(440, 880, 0.3, 'triangle'); break;
+                    case 'checkpoint': this.synth(200, 800, 0.5, 'square'); break;
+                }
+            },
+            synth(start, end, dur, type) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(start, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(end, this.ctx.currentTime + dur);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + dur);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + dur);
+            }
+        };
+
+        let state = {
+            active: true, score: 0, coins: 0, distance: 0, integrity: CONFIG.maxIntegrity,
+            cameraX: 0, cameraY: 0, lastPlatformX: 0, frame: 0, shake: 0,
+            platformsSpawned: 0, lastCheckpoint: null, lastSafePlatform: null,
+            zoom: 1.0,
+            startTime: Date.now(),
+            bgElements: [] // 装饰性背景元素
+        };
+
+        let player = {
+            x: 200, y: 300, w: CONFIG.playerWidth, h: CONFIG.playerHeight,
+            vx: 0, vy: 0, rotation: 0, isGrounded: false,
+            coyoteCounter: 0, jumpBuffer: 0, jumpCount: 0,
+            invuln: 0, visualScaleX: 1, visualScaleY: 1
+        };
+
+        let platforms = [];
+        let collectibles = [];
+        let enemies = [];
+        let particles = [];
+        let checkpoints = [];
+        const keys = {};
+
+        function init() {
+            resize();
+            window.addEventListener('resize', resize);
+            window.addEventListener('blur', () => { for (let k in keys) keys[k] = false; });
+            window.addEventListener('keydown', e => { 
+                AudioEngine.init(); keys[e.code] = true; 
+                if(['Space', 'ArrowUp', 'KeyW'].includes(e.code)) player.jumpBuffer = CONFIG.jumpBufferTime; 
+            });
+            window.addEventListener('keyup', e => keys[e.code] = false);
+            setupTouch('btn-left', 'ArrowLeft'); setupTouch('btn-right', 'ArrowRight'); setupTouch('btn-jump', 'Space');
+            
+            // 初始化背景装饰
+            for(let i=0; i<15; i++) spawnBgElement();
+            
+            resetGame(); requestAnimationFrame(loop);
+        }
+
+        function setupTouch(id, code) {
+            const btn = document.getElementById(id);
+            const start = (e) => { 
+                AudioEngine.init(); if (e.cancelable) e.preventDefault(); 
+                keys[code] = true; if(code === 'Space') player.jumpBuffer = CONFIG.jumpBufferTime; 
+            };
+            const end = (e) => { if (e.cancelable) e.preventDefault(); keys[code] = false; };
+            btn.addEventListener('touchstart', start, { passive: false });
+            btn.addEventListener('touchend', end, { passive: false });
+            btn.addEventListener('mousedown', start);
+            btn.addEventListener('mouseup', end);
+        }
+
+        function resize() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            state.zoom = (canvas.height > canvas.width) ? Math.max(0.6, canvas.width / 500) : 1.0;
+        }
+
+        function spawnBgElement() {
+            const types = ['cloud', 'hill', 'bush'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            state.bgElements.push({
+                x: Math.random() * 2000,
+                y: type === 'cloud' ? 50 + Math.random() * 150 : canvas.height - 100,
+                type: type,
+                speed: type === 'cloud' ? 0.2 + Math.random() * 0.5 : 0,
+                w: type === 'cloud' ? 100 + Math.random() * 100 : 150 + Math.random() * 200,
+                h: type === 'cloud' ? 40 : 80
+            });
+        }
+
+        function resetGame() {
+            state = { ...state, active: true, score: 0, coins: 0, distance: 0, integrity: CONFIG.maxIntegrity,
+                cameraX: 0, cameraY: 0, lastPlatformX: 800, frame: 0, shake: 0,
+                platformsSpawned: 0, lastCheckpoint: null, lastSafePlatform: null,
+                startTime: Date.now()
+            };
+            player = { ...player, x: 100, y: 300, vx: 0, vy: 0, invuln: 0 };
+            platforms = [{ x: 0, y: 450, w: 800, h: 40, type: 'start' }];
+            state.lastSafePlatform = platforms[0];
+            collectibles = []; enemies = []; particles = []; checkpoints = [];
+            gameOverModal.style.display = 'none'; addFeed("第 1-1 关开始！"); updateUI();
+        }
+
+        function addFeed(msg) {
+            const div = document.createElement('div');
+            div.style.padding = '5px'; div.style.borderBottom = '1px dashed #ccc';
+            div.innerText = "> " + msg; feedContainer.prepend(div);
+            if(feedContainer.children.length > 8) feedContainer.lastChild.remove();
+        }
+
+        function triggerRespawn() {
+            const target = state.lastSafePlatform || platforms[0];
+            state.active = false;
+            checkpointMsg.style.opacity = 1;
+            setTimeout(() => {
+                const vW = canvas.width / state.zoom;
+                state.cameraX = target.x - vW * 0.3;
+                player.x = target.x + 20; player.y = target.y - player.h - 100;
+                player.vx = 0; player.vy = 0;
+                state.integrity = CONFIG.maxIntegrity;
+                state.active = true; player.invuln = 60;
+                checkpointMsg.style.opacity = 0;
+                createParticles(player.x, player.y, '#fff', 20, 'burst');
+                updateUI();
+            }, 500);
+        }
+
+        function update() {
+            if (!state.active) return;
+            state.frame++;
+
+            if (keys['ArrowLeft'] || keys['KeyA']) player.vx -= CONFIG.acceleration;
+            else if (keys['ArrowRight'] || keys['KeyD']) player.vx += CONFIG.acceleration;
+            else player.vx *= CONFIG.friction;
+
+            player.vx = Math.max(-CONFIG.maxSpeed, Math.min(CONFIG.maxSpeed, player.vx));
+
+            if (player.isGrounded) { player.coyoteCounter = CONFIG.jumpCoyoteTime; player.jumpCount = 0; }
+            else { player.coyoteCounter--; }
+
+            if (player.jumpBuffer > 0) {
+                if (player.coyoteCounter > 0 || player.jumpCount < 2) {
+                    player.vy = CONFIG.jumpForce; player.isGrounded = false;
+                    player.coyoteCounter = 0; player.jumpBuffer = 0; player.jumpCount++;
+                    player.visualScaleY = 1.3; player.visualScaleX = 0.8;
+                    AudioEngine.play('jump');
+                }
+                player.jumpBuffer--;
+            }
+
+            player.vy += CONFIG.gravity;
+            player.x += player.vx;
+            player.y += player.vy;
+
+            player.isGrounded = false;
+            platforms.forEach(p => {
+                if (player.x + player.w > p.x && player.x < p.x + p.w &&
+                    player.y + player.h >= p.y && player.y + player.h <= p.y + p.h + player.vy && player.vy >= 0) {
+                    player.y = p.y - player.h; player.vy = 0; player.isGrounded = true;
+                    if (!state.lastSafePlatform || p.x > state.lastSafePlatform.x) state.lastSafePlatform = p;
+                }
+            });
+
+            const vW = canvas.width / state.zoom;
+            const vH = canvas.height / state.zoom;
+
+            // 背景云朵移动
+            state.bgElements.forEach(el => {
+                if(el.type === 'cloud') {
+                    el.x -= el.speed;
+                    if(el.x + el.w < state.cameraX) el.x = state.cameraX + vW + 100;
+                }
+            });
+
+            collectibles.forEach(c => {
+                if (!c.collected && player.x < c.x + c.w && player.x + player.w > c.x && player.y < c.y + c.h && player.y + player.h > c.y) {
+                    c.collected = true;
+                    if (c.type === 'heal') {
+                        state.integrity = Math.min(100, state.integrity + 30); AudioEngine.play('heal');
+                    } else {
+                        state.score += 100; state.coins++; AudioEngine.play('coin');
+                    }
+                    updateUI();
+                }
+            });
+
+            enemies.forEach(e => {
+                if (player.invuln <= 0 && player.x < e.x + e.w && player.x + player.w > e.x && player.y < e.y + e.h && player.y + player.h > e.y) {
+                    takeDamage(25); player.invuln = 40;
+                }
+            });
+
+            const targetCamX = player.x - vW * 0.3;
+            state.cameraX += (targetCamX - state.cameraX) * 0.1;
+
+            while (state.lastPlatformX < state.cameraX + vW + 500) generatePlatform();
+
+            state.distance = Math.max(state.distance, Math.floor(player.x / 40));
+            updateUI();
+
+            // 如果血量归零且没有复活逻辑，或者触发了彻底失败
+            // 这里我们设置一个彻底失败的条件，比如坠落且血量不足以支付惩罚
+            // 或者我们可以手动通过一个按钮或逻辑触发 gameOver()
+            // 在本版本中，我们假设血量耗尽即“死亡”，展示结算画面
+            
+            if (player.y > vH + 200) {
+                // 坠落直接伤害，血量归零后结算
+                state.integrity -= 25;
+                if(state.integrity <= 0) gameOver();
+                else triggerRespawn();
+            }
+
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.life -= 0.02; if (p.life <= 0) particles.splice(i, 1);
+            });
+
+            if (player.invuln > 0) player.invuln--;
+            player.visualScaleX += (1 - player.visualScaleX) * 0.2;
+            player.visualScaleY += (1 - player.visualScaleY) * 0.2;
+        }
+
+        function generatePlatform() {
+            const gap = CONFIG.gapMin + Math.random() * (CONFIG.gapMax - CONFIG.gapMin);
+            const width = CONFIG.platformMinW + Math.random() * (CONFIG.platformMaxW - CONFIG.platformMinW);
+            const lastPlat = platforms[platforms.length - 1];
+            let newY = Math.max(200, Math.min(canvas.height - 100, lastPlat.y + (Math.random() - 0.5) * 200));
+            
+            platforms.push({ x: state.lastPlatformX + gap, y: newY, w: width, h: 40 });
+            state.platformsSpawned++;
+
+            if(Math.random() > 0.4) {
+                collectibles.push({ x: state.lastPlatformX + gap + width/2 - 15, y: newY - 60, w: 30, h: 30, type: 'coin' });
+            }
+            if(Math.random() > 0.8) {
+                enemies.push({ x: state.lastPlatformX + gap + width/3, y: newY - 40, w: 40, h: 40, type: 'spike' });
+            }
+
+            state.lastPlatformX += gap + width;
+            if(platforms.length > 30) platforms.shift();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.scale(state.zoom, state.zoom);
+            ctx.translate(-state.cameraX, 0);
+
+            // 绘制背景
+            state.bgElements.forEach(el => {
+                ctx.fillStyle = el.type === 'cloud' ? '#fff' : (el.type === 'hill' ? '#4dbd33' : '#228b22');
+                if(el.type === 'cloud') {
+                    ctx.beginPath(); ctx.ellipse(el.x, el.y, el.w/2, el.h/2, 0, 0, Math.PI*2); ctx.fill();
+                } else {
+                    ctx.beginPath(); ctx.moveTo(el.x, canvas.height); ctx.lineTo(el.x + el.w/2, el.y); ctx.lineTo(el.x + el.w, canvas.height); ctx.fill();
+                }
+            });
+
+            // 绘制平台
+            platforms.forEach(p => {
+                ctx.fillStyle = '#ba4a00';
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.fillStyle = '#228b22';
+                ctx.fillRect(p.x, p.y, p.w, 10);
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 2;
+                ctx.strokeRect(p.x, p.y, p.w, p.h);
+            });
+
+            // 绘制金币
+            collectibles.forEach(c => {
+                if(!c.collected) {
+                    ctx.fillStyle = '#ffd700'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(c.x + 15, c.y + 15 + Math.sin(state.frame * 0.1) * 5, 12, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                }
+            });
+
+            // 绘制敌人
+            enemies.forEach(e => {
+                ctx.fillStyle = '#333';
+                ctx.beginPath(); ctx.arc(e.x + 20, e.y + 20, 20, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.fillRect(e.x + 10, e.y + 10, 5, 5); ctx.fillRect(e.x + 25, e.y + 10, 5, 5);
+            });
+
+            // 绘制玩家
+            ctx.save();
+            ctx.translate(player.x + player.w/2, player.y + player.h/2);
+            ctx.scale(player.visualScaleX, player.visualScaleY);
+            if(player.invuln > 0 && state.frame % 4 < 2) ctx.globalAlpha = 0.5;
+            
+            ctx.fillStyle = '#ff0000'; 
+            ctx.fillRect(-player.w/2, -player.h/2, player.w, player.h);
+            ctx.fillStyle = '#0000ff'; 
+            ctx.fillRect(-player.w/2, 10, player.w, player.h/2 - 10);
+            ctx.fillStyle = '#f5cba7'; 
+            ctx.fillRect(-player.w/2 + 5, -player.h/2 + 5, player.w - 10, 20);
+            ctx.fillStyle = '#000'; 
+            ctx.fillRect(5, -15, 5, 5);
+            ctx.restore();
+
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 5, 5);
+            });
+
+            ctx.restore();
+        }
+
+        function createParticles(x, y, color, count, type) {
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x, y, color, life: 1.0,
+                    vx: (Math.random()-0.5) * 10,
+                    vy: (Math.random()-0.5) * 10
+                });
+            }
+        }
+
+        function takeDamage(amt) {
+            state.integrity -= amt; AudioEngine.play('hurt');
+            createParticles(player.x, player.y, '#ff0000', 15, 'burst');
+            if (state.integrity <= 0) {
+                state.integrity = 0;
+                gameOver();
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            uiScore.innerText = state.score.toString().padStart(6, '0');
+            uiCoins.innerText = state.coins;
+            uiDistance.innerText = '距离: ' + state.distance.toString().padStart(4, '0') + 'm';
+            integrityBar.style.width = state.integrity + '%';
+        }
+
+        function gameOver() {
+            state.active = false;
+            
+            // 计算时间
+            const timeElapsed = Math.floor((Date.now() - state.startTime) / 1000);
+            
+            // 计算段位
+            let rank = 'C';
+            if (state.score > 20000) rank = 'S';
+            else if (state.score > 10000) rank = 'A';
+            else if (state.score > 5000) rank = 'B';
+
+            // 填充结算画面
+            document.getElementById('final-dist').innerText = state.distance + 'm';
+            document.getElementById('final-score').innerText = state.score;
+            document.getElementById('final-coins').innerText = state.coins;
+            document.getElementById('final-time').innerText = timeElapsed + 's';
+            
+            const badge = document.getElementById('rank-badge');
+            badge.innerText = rank;
+            
+            // 根据评价改变颜色
+            if(rank === 'S') badge.style.background = '#ffd700';
+            else if(rank === 'A') badge.style.background = '#c0c0c0';
+            else if(rank === 'B') badge.style.background = '#cd7f32';
+            else badge.style.background = '#fff';
+
+            gameOverModal.style.display = 'flex';
+            addFeed("冒险结束，等级判定: " + rank);
+        }
+
+        function restart() { resetGame(); }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        init();
+    </script>
+</body>
+</html>
