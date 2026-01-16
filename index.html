@@ -1,15 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NEOSHIFT | 复古大冒险</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- 引入像素字体 -->
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
     <style>
         :root {
             --primary: #ffd700;    /* 金币黄 */
@@ -21,6 +15,7 @@
             --surface: #ffffff;
         }
 
+        /* 替换为系统像素风格字体栈 */
         * {
             box-sizing: border-box;
             user-select: none;
@@ -29,7 +24,7 @@
         }
 
         body {
-            font-family: 'Press Start 2P', 'ZCOOL KuaiLe', cursive;
+            font-family: 'Consolas', 'Monaco', 'Courier New', 'ZCOOL KuaiLe', monospace;
             background-color: var(--bg-dark);
             color: #000;
             margin: 0;
@@ -119,6 +114,7 @@
             padding: 4px 8px;
             display: inline-block;
             margin-bottom: 0.5rem;
+            text-transform: uppercase;
         }
 
         .mobile-controls {
@@ -150,6 +146,11 @@
         .btn-ctrl:active {
             transform: translate(2px, 2px);
             box-shadow: 2px 2px 0px #000;
+        }
+
+        .btn-ctrl svg {
+            width: 32px;
+            height: 32px;
         }
 
         @media (max-width: 768px) {
@@ -206,14 +207,14 @@
         }
 
         .stat-label {
-            font-size: 8px;
+            font-size: 10px;
             color: #888;
             margin-bottom: 5px;
             display: block;
         }
 
         .stat-value {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
         }
 
@@ -330,10 +331,16 @@
 
             <div class="mobile-controls">
                 <div style="display: flex; gap: 1rem;">
-                    <div class="btn-ctrl" id="btn-left"><span class="material-symbols-outlined">arrow_back</span></div>
-                    <div class="btn-ctrl" id="btn-right"><span class="material-symbols-outlined">arrow_forward</span></div>
+                    <div class="btn-ctrl" id="btn-left">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+                    </div>
+                    <div class="btn-ctrl" id="btn-right">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg>
+                    </div>
                 </div>
-                <div class="btn-ctrl" id="btn-jump"><span class="material-symbols-outlined" style="font-size: 2.5rem;">keyboard_double_arrow_up</span></div>
+                <div class="btn-ctrl" id="btn-jump">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41,18.41L6,17L12,11L18,17L16.59,18.41L12,13.83L7.41,18.41M7.41,12.41L6,11L12,5L18,11L16.59,12.41L12,7.83L7.41,12.41Z"/></svg>
+                </div>
             </div>
         </section>
     </main>
@@ -618,13 +625,7 @@
             state.distance = Math.max(state.distance, Math.floor(player.x / 40));
             updateUI();
 
-            // 如果血量归零且没有复活逻辑，或者触发了彻底失败
-            // 这里我们设置一个彻底失败的条件，比如坠落且血量不足以支付惩罚
-            // 或者我们可以手动通过一个按钮或逻辑触发 gameOver()
-            // 在本版本中，我们假设血量耗尽即“死亡”，展示结算画面
-            
             if (player.y > vH + 200) {
-                // 坠落直接伤害，血量归零后结算
                 state.integrity -= 25;
                 if(state.integrity <= 0) gameOver();
                 else triggerRespawn();
@@ -753,31 +754,21 @@
 
         function gameOver() {
             state.active = false;
-            
-            // 计算时间
             const timeElapsed = Math.floor((Date.now() - state.startTime) / 1000);
-            
-            // 计算段位
             let rank = 'C';
             if (state.score > 20000) rank = 'S';
             else if (state.score > 10000) rank = 'A';
             else if (state.score > 5000) rank = 'B';
-
-            // 填充结算画面
             document.getElementById('final-dist').innerText = state.distance + 'm';
             document.getElementById('final-score').innerText = state.score;
             document.getElementById('final-coins').innerText = state.coins;
             document.getElementById('final-time').innerText = timeElapsed + 's';
-            
             const badge = document.getElementById('rank-badge');
             badge.innerText = rank;
-            
-            // 根据评价改变颜色
             if(rank === 'S') badge.style.background = '#ffd700';
             else if(rank === 'A') badge.style.background = '#c0c0c0';
             else if(rank === 'B') badge.style.background = '#cd7f32';
             else badge.style.background = '#fff';
-
             gameOverModal.style.display = 'flex';
             addFeed("冒险结束，等级判定: " + rank);
         }
