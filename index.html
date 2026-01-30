@@ -34,7 +34,7 @@
             flex-direction: column;
         }
 
-        /* 复古风格的 Header */
+        /* 复古风格的顶部栏 */
         header {
             display: flex;
             align-items: center;
@@ -119,9 +119,9 @@
 
         .mobile-controls {
             position: absolute;
-            bottom: 2rem;
-            left: 1rem;
-            right: 1rem;
+            bottom: 0.5rem;
+            left: 0.8rem;
+            right: 0.8rem;
             display: none;
             justify-content: space-between;
             z-index: 101;
@@ -131,30 +131,149 @@
         .btn-ctrl {
             width: 70px;
             height: 70px;
-            background: white;
+            background: rgba(255, 255, 255, 0.9);
             border: 5px solid #000;
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #000;
-            transition: transform 0.1s;
+            transition: transform 0.1s, background 0.1s;
             pointer-events: auto;
-            box-shadow: 4px 4px 0px #000;
+            box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            backdrop-filter: blur(4px);
         }
 
         .btn-ctrl:active {
             transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0px #000;
+            box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+            background: rgba(255, 215, 0, 0.95);
         }
 
         .btn-ctrl svg {
             width: 32px;
             height: 32px;
+            pointer-events: none;
         }
 
-        @media (max-width: 768px) {
-            .mobile-controls { display: flex; }
+        /* 移动端适配 */
+        @media (max-width: 768px), (max-height: 600px) {
+            .mobile-controls { 
+                display: flex; 
+            }
+            
+            header {
+                padding: 0.5rem 1rem;
+                font-size: 12px;
+            }
+            
+            header h1 {
+                font-size: 12px !important;
+            }
+            
+            main {
+                padding: 0.5rem;
+            }
+            
+            .hud-stats {
+                padding: 0.8rem;
+                font-size: 12px;
+            }
+            
+            #ui-score {
+                font-size: 16px !important;
+            }
+        }
+
+        /* 桌面端强制隐藏移动控制器 */
+        @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+            .mobile-controls {
+                display: none !important;
+            }
+        }
+
+        /* 竖屏模式优化 */
+        @media (orientation: portrait) {
+            .mobile-controls {
+                bottom: 0.5rem;
+                flex-direction: row;
+                align-items: flex-end;
+                gap: 0.5rem;
+                justify-content: space-between;
+            }
+            
+            .mobile-controls > div:first-child {
+                display: flex;
+                gap: 0.5rem;
+                order: 1;
+            }
+            
+            #btn-jump {
+                order: 2;
+            }
+            
+            .btn-ctrl {
+                width: 65px;
+                height: 65px;
+            }
+        }
+
+        /* 横屏模式优化 */
+        @media (orientation: landscape) and (max-height: 600px) {
+            header {
+                padding: 0.3rem 0.8rem;
+            }
+            
+            .mobile-controls {
+                bottom: 1rem;
+            }
+            
+            .btn-ctrl {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .btn-ctrl svg {
+                width: 28px;
+                height: 28px;
+            }
+        }
+
+        /* 小屏幕设备 */
+        @media (max-width: 480px) {
+            .btn-ctrl {
+                width: 58px;
+                height: 58px;
+                border: 4px solid #000;
+            }
+            
+            .btn-ctrl svg {
+                width: 26px;
+                height: 26px;
+            }
+            
+            .hud-stats {
+                padding: 0.5rem;
+            }
+            
+            #integrity-bar {
+                width: 80px !important;
+            }
+            
+            .mobile-controls {
+                bottom: 0.3rem;
+                left: 0.5rem;
+                right: 0.5rem;
+            }
+        }
+
+        /* 触摸设备检测 */
+        @media (hover: none) and (pointer: coarse) {
+            .mobile-controls {
+                display: flex !important;
+            }
         }
 
         /* 结算画面 */
@@ -327,6 +446,11 @@
                 </div>
             </div>
 
+            <!-- 调试信息 -->
+            <div id="debug-info" style="position: absolute; bottom: 5px; left: 5px; color: white; font-size: 10px; text-shadow: 1px 1px 2px black; pointer-events: none; z-index: 150; display: block;">
+                玩家: <span id="debug-player">0,0</span> | 相机: <span id="debug-camera">0</span> | 平台: <span id="debug-platforms">0</span>
+            </div>
+
             <canvas id="gameCanvas"></canvas>
 
             <div class="mobile-controls">
@@ -453,7 +577,7 @@
         };
 
         let player = {
-            x: 200, y: 300, w: CONFIG.playerWidth, h: CONFIG.playerHeight,
+            x: 100, y: 200, w: CONFIG.playerWidth, h: CONFIG.playerHeight,
             vx: 0, vy: 0, rotation: 0, isGrounded: false,
             coyoteCounter: 0, jumpBuffer: 0, jumpCount: 0,
             invuln: 0, visualScaleX: 1, visualScaleY: 1
@@ -470,17 +594,53 @@
             resize();
             window.addEventListener('resize', resize);
             window.addEventListener('blur', () => { for (let k in keys) keys[k] = false; });
+            
+            // 桌面端键盘控制
             window.addEventListener('keydown', e => { 
-                AudioEngine.init(); keys[e.code] = true; 
-                if(['Space', 'ArrowUp', 'KeyW'].includes(e.code)) player.jumpBuffer = CONFIG.jumpBufferTime; 
+                AudioEngine.init(); 
+                keys[e.code] = true; 
+                if(['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+                    e.preventDefault(); // 防止空格键滚动页面
+                    player.jumpBuffer = CONFIG.jumpBufferTime;
+                }
             });
-            window.addEventListener('keyup', e => keys[e.code] = false);
-            setupTouch('btn-left', 'ArrowLeft'); setupTouch('btn-right', 'ArrowRight'); setupTouch('btn-jump', 'Space');
+            window.addEventListener('keyup', e => {
+                keys[e.code] = false;
+                if(['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+                    e.preventDefault();
+                }
+            });
+            
+            // 移动端触摸控制
+            setupTouch('btn-left', 'ArrowLeft'); 
+            setupTouch('btn-right', 'ArrowRight'); 
+            setupTouch('btn-jump', 'Space');
+            
+            // 检测设备类型并显示相应控制器
+            detectDeviceAndShowControls();
             
             // 初始化背景装饰
             for(let i=0; i<15; i++) spawnBgElement();
             
-            resetGame(); requestAnimationFrame(loop);
+            resetGame(); 
+            requestAnimationFrame(loop);
+        }
+
+        function detectDeviceAndShowControls() {
+            const isTouchDevice = ('ontouchstart' in window) || 
+                                 (navigator.maxTouchPoints > 0) || 
+                                 (navigator.msMaxTouchPoints > 0);
+            const isSmallScreen = window.innerWidth <= 768 || window.innerHeight <= 600;
+            const hasHover = window.matchMedia('(hover: hover)').matches;
+            const hasPointer = window.matchMedia('(pointer: fine)').matches;
+            
+            // 只在真正的触摸设备或小屏幕上显示控制器
+            // 桌面端（有鼠标悬停和精确指针）不显示
+            if ((isTouchDevice || isSmallScreen) && !(hasHover && hasPointer && window.innerWidth > 768)) {
+                document.querySelector('.mobile-controls').style.display = 'flex';
+            } else {
+                document.querySelector('.mobile-controls').style.display = 'none';
+            }
         }
 
         function setupTouch(id, code) {
@@ -497,9 +657,28 @@
         }
 
         function resize() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-            state.zoom = (canvas.height > canvas.width) ? Math.max(0.6, canvas.width / 500) : 1.0;
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            // 检测设备类型
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const isMobileHorizontal = !isPortrait && window.innerHeight < 600 && window.innerWidth < 1024;
+            const isDesktop = window.innerWidth >= 1024;
+            
+            if (isMobileHorizontal) {
+                // 移动端横屏：使用修复后的缩放，确保平台可见
+                state.zoom = Math.max(0.6, Math.min(1.0, canvas.height / 600));
+            } else if (isDesktop) {
+                // 桌面端：使用原始缩放
+                state.zoom = 1.0;
+            } else {
+                // 移动端竖屏/平板：使用原始缩放逻辑
+                state.zoom = (canvas.height > canvas.width) ? Math.max(0.6, canvas.width / 500) : 1.0;
+            }
+            
+            // 窗口大小改变时重新检测设备类型
+            detectDeviceAndShowControls();
         }
 
         function spawnBgElement() {
@@ -521,11 +700,38 @@
                 platformsSpawned: 0, lastCheckpoint: null, lastSafePlatform: null,
                 startTime: Date.now()
             };
-            player = { ...player, x: 100, y: 300, vx: 0, vy: 0, invuln: 0 };
-            platforms = [{ x: 0, y: 450, w: 800, h: 40, type: 'start' }];
+            
+            // 确保canvas已初始化
+            const canvasH = canvas.height || 600;
+            const platformY = canvasH * 0.7; // 平台在屏幕70%高度处
+            
+            // 重置玩家到安全位置
+            player.x = 100;
+            player.y = platformY - player.h - 10; // 玩家在平台上方
+            player.vx = 0;
+            player.vy = 0;
+            player.invuln = 0;
+            player.isGrounded = false;
+            player.jumpCount = 0;
+            player.coyoteCounter = 0;
+            player.jumpBuffer = 0;
+            
+            // 创建初始平台 - 确保玩家能站在上面
+            platforms = [
+                { x: 0, y: platformY, w: 400, h: 40, type: 'start' },
+                { x: 450, y: platformY + 20, w: 300, h: 40, type: 'normal' }
+            ];
             state.lastSafePlatform = platforms[0];
-            collectibles = []; enemies = []; particles = []; checkpoints = [];
-            gameOverModal.style.display = 'none'; addFeed("第 1-1 关开始！"); updateUI();
+            state.lastPlatformX = 750;
+            
+            collectibles = []; 
+            enemies = []; 
+            particles = []; 
+            checkpoints = [];
+            
+            gameOverModal.style.display = 'none'; 
+            addFeed("第 1-1 关开始！");
+            updateUI();
         }
 
         function addFeed(msg) {
@@ -644,7 +850,12 @@
             const gap = CONFIG.gapMin + Math.random() * (CONFIG.gapMax - CONFIG.gapMin);
             const width = CONFIG.platformMinW + Math.random() * (CONFIG.platformMaxW - CONFIG.platformMinW);
             const lastPlat = platforms[platforms.length - 1];
-            let newY = Math.max(200, Math.min(canvas.height - 100, lastPlat.y + (Math.random() - 0.5) * 200));
+            
+            // 确保平台在可见范围内 - 使用固定值或canvas高度
+            const canvasH = canvas.height || 600; // 默认600如果canvas未初始化
+            const minY = canvasH * 0.4;
+            const maxY = canvasH * 0.75;
+            let newY = Math.max(minY, Math.min(maxY, lastPlat.y + (Math.random() - 0.5) * 150));
             
             platforms.push({ x: state.lastPlatformX + gap, y: newY, w: width, h: 40 });
             state.platformsSpawned++;
@@ -701,21 +912,27 @@
                 ctx.fillStyle = '#fff'; ctx.fillRect(e.x + 10, e.y + 10, 5, 5); ctx.fillRect(e.x + 25, e.y + 10, 5, 5);
             });
 
-            // 绘制玩家
-            ctx.save();
-            ctx.translate(player.x + player.w/2, player.y + player.h/2);
-            ctx.scale(player.visualScaleX, player.visualScaleY);
-            if(player.invuln > 0 && state.frame % 4 < 2) ctx.globalAlpha = 0.5;
-            
-            ctx.fillStyle = '#ff0000'; 
-            ctx.fillRect(-player.w/2, -player.h/2, player.w, player.h);
-            ctx.fillStyle = '#0000ff'; 
-            ctx.fillRect(-player.w/2, 10, player.w, player.h/2 - 10);
-            ctx.fillStyle = '#f5cba7'; 
-            ctx.fillRect(-player.w/2 + 5, -player.h/2 + 5, player.w - 10, 20);
-            ctx.fillStyle = '#000'; 
-            ctx.fillRect(5, -15, 5, 5);
-            ctx.restore();
+            // 绘制玩家 - 确保始终可见
+            if (state.active) {
+                ctx.save();
+                ctx.translate(player.x + player.w/2, player.y + player.h/2);
+                ctx.scale(player.visualScaleX, player.visualScaleY);
+                if(player.invuln > 0 && state.frame % 4 < 2) ctx.globalAlpha = 0.5;
+                
+                // 红色上衣
+                ctx.fillStyle = '#ff0000'; 
+                ctx.fillRect(-player.w/2, -player.h/2, player.w, player.h);
+                // 蓝色裤子
+                ctx.fillStyle = '#0000ff'; 
+                ctx.fillRect(-player.w/2, 10, player.w, player.h/2 - 10);
+                // 肤色脸部
+                ctx.fillStyle = '#f5cba7'; 
+                ctx.fillRect(-player.w/2 + 5, -player.h/2 + 5, player.w - 10, 20);
+                // 眼睛
+                ctx.fillStyle = '#000'; 
+                ctx.fillRect(5, -15, 5, 5);
+                ctx.restore();
+            }
 
             particles.forEach(p => {
                 ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
@@ -750,6 +967,14 @@
             uiCoins.innerText = state.coins;
             uiDistance.innerText = '距离: ' + state.distance.toString().padStart(4, '0') + 'm';
             integrityBar.style.width = state.integrity + '%';
+            
+            // 更新调试信息
+            const debugPlayer = document.getElementById('debug-player');
+            const debugCamera = document.getElementById('debug-camera');
+            const debugPlatforms = document.getElementById('debug-platforms');
+            if (debugPlayer) debugPlayer.innerText = `${Math.floor(player.x)},${Math.floor(player.y)} grounded:${player.isGrounded}`;
+            if (debugCamera) debugCamera.innerText = Math.floor(state.cameraX);
+            if (debugPlatforms) debugPlatforms.innerText = platforms.length;
         }
 
         function gameOver() {
