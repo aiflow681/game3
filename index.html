@@ -126,6 +126,7 @@
             justify-content: space-between;
             z-index: 101;
             pointer-events: none;
+            touch-action: none; /* 防止默认触摸行为 */
         }
 
         .btn-ctrl {
@@ -144,9 +145,19 @@
             -webkit-tap-highlight-color: transparent;
             user-select: none;
             backdrop-filter: blur(4px);
+            touch-action: manipulation; /* 允许多点触控 */
+            position: relative;
+            z-index: 102;
         }
 
         .btn-ctrl:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+            background: rgba(255, 215, 0, 0.95);
+        }
+        
+        /* 添加按下状态的类（用于触摸反馈） */
+        .btn-ctrl.pressed {
             transform: translate(2px, 2px);
             box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
             background: rgba(255, 215, 0, 0.95);
@@ -448,22 +459,23 @@
 
             <!-- 调试信息 -->
             <div id="debug-info" style="position: absolute; bottom: 5px; left: 5px; color: white; font-size: 10px; text-shadow: 1px 1px 2px black; pointer-events: none; z-index: 150; display: block;">
-                玩家: <span id="debug-player">0,0</span> | 相机: <span id="debug-camera">0</span> | 平台: <span id="debug-platforms">0</span>
+                玩家: <span id="debug-player">0,0</span> | 相机: <span id="debug-camera">0</span> | 平台: <span id="debug-platforms">0</span><br>
+                按键: <span id="debug-keys">无</span>
             </div>
 
             <canvas id="gameCanvas"></canvas>
 
             <div class="mobile-controls">
-                <div style="display: flex; gap: 1rem;">
-                    <div class="btn-ctrl" id="btn-left">
+                <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                    <div class="btn-ctrl" id="btn-left" data-action="left">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
                     </div>
-                    <div class="btn-ctrl" id="btn-right">
+                    <div class="btn-ctrl" id="btn-right" data-action="right">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></svg>
                     </div>
                 </div>
-                <div class="btn-ctrl" id="btn-jump">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41,18.41L6,17L12,11L18,17L16.59,18.41L12,13.83L7.41,18.41M7.41,12.41L6,11L12,5L18,11L16.59,12.41L12,7.83L7.41,12.41Z"/></svg>
+                <div class="btn-ctrl" id="btn-jump" data-action="jump" style="width: 80px; height: 80px;">
+                    <svg viewBox="0 0 24 24" fill="currentColor" style="width: 36px; height: 36px;"><path d="M7.41,18.41L6,17L12,11L18,17L16.59,18.41L12,13.83L7.41,18.41M7.41,12.41L6,11L12,5L18,11L16.59,12.41L12,7.83L7.41,12.41Z"/></svg>
                 </div>
             </div>
         </section>
@@ -597,7 +609,7 @@
             
             // 桌面端键盘控制
             window.addEventListener('keydown', e => { 
-                AudioEngine.init(); 
+                AudioEngine.init(); // 首次按键时初始化音频
                 keys[e.code] = true; 
                 if(['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
                     e.preventDefault(); // 防止空格键滚动页面
@@ -646,15 +658,28 @@
         function setupTouch(id, code) {
             const btn = document.getElementById(id);
             const start = (e) => { 
-                AudioEngine.init(); if (e.cancelable) e.preventDefault(); 
-                keys[code] = true; if(code === 'Space') player.jumpBuffer = CONFIG.jumpBufferTime; 
+                AudioEngine.init(); 
+                if (e.cancelable) e.preventDefault(); 
+                e.stopPropagation(); // 防止事件冒泡
+                keys[code] = true; 
+                btn.classList.add('pressed'); // 添加视觉反馈
+                if(code === 'Space') player.jumpBuffer = CONFIG.jumpBufferTime; 
             };
-            const end = (e) => { if (e.cancelable) e.preventDefault(); keys[code] = false; };
+            const end = (e) => { 
+                if (e.cancelable) e.preventDefault(); 
+                e.stopPropagation();
+                keys[code] = false; 
+                btn.classList.remove('pressed'); // 移除视觉反馈
+            };
+            // 支持多点触控
             btn.addEventListener('touchstart', start, { passive: false });
             btn.addEventListener('touchend', end, { passive: false });
+            btn.addEventListener('touchcancel', end, { passive: false }); // 处理触摸取消
+            // 桌面端鼠标支持（用于测试）
             btn.addEventListener('mousedown', start);
             btn.addEventListener('mouseup', end);
-        }
+            btn.addEventListener('mouseleave', end); // 鼠标移出时也释放
+        }   
 
         function resize() {
             const container = canvas.parentElement;
@@ -972,9 +997,17 @@
             const debugPlayer = document.getElementById('debug-player');
             const debugCamera = document.getElementById('debug-camera');
             const debugPlatforms = document.getElementById('debug-platforms');
+            const debugKeys = document.getElementById('debug-keys');
             if (debugPlayer) debugPlayer.innerText = `${Math.floor(player.x)},${Math.floor(player.y)} grounded:${player.isGrounded}`;
             if (debugCamera) debugCamera.innerText = Math.floor(state.cameraX);
             if (debugPlatforms) debugPlatforms.innerText = platforms.length;
+            if (debugKeys) {
+                const activeKeys = [];
+                if (keys['ArrowLeft'] || keys['KeyA']) activeKeys.push('←');
+                if (keys['ArrowRight'] || keys['KeyD']) activeKeys.push('→');
+                if (keys['Space']) activeKeys.push('跳');
+                debugKeys.innerText = activeKeys.length > 0 ? activeKeys.join('+') : '无';
+            }
         }
 
         function gameOver() {
