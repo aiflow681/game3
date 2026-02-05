@@ -127,6 +127,9 @@
             z-index: 101;
             pointer-events: none;
             touch-action: none; /* 防止默认触摸行为 */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         .btn-ctrl {
@@ -144,10 +147,15 @@
             box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
             -webkit-tap-highlight-color: transparent;
             user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
             backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px); /* Safari支持 */
             touch-action: manipulation; /* 允许多点触控 */
             position: relative;
             z-index: 102;
+            cursor: pointer;
         }
 
         .btn-ctrl:active {
@@ -169,12 +177,8 @@
             pointer-events: none;
         }
 
-        /* 移动端适配 */
+        /* 移动端适配 - 使用更兼容的媒体查询 */
         @media (max-width: 768px), (max-height: 600px) {
-            .mobile-controls { 
-                display: flex; 
-            }
-            
             header {
                 padding: 0.5rem 1rem;
                 font-size: 12px;
@@ -198,15 +202,8 @@
             }
         }
 
-        /* 桌面端强制隐藏移动控制器 */
-        @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
-            .mobile-controls {
-                display: none !important;
-            }
-        }
-
         /* 竖屏模式优化 */
-        @media (orientation: portrait) {
+        @media (max-width: 768px) and (orientation: portrait) {
             .mobile-controls {
                 bottom: 5.5rem; /* 竖屏稍高一点避免浏览器UI */
                 flex-direction: row;
@@ -232,7 +229,7 @@
         }
 
         /* 横屏模式优化 */
-        @media (orientation: landscape) and (max-height: 600px) {
+        @media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
             header {
                 padding: 0.3rem 0.8rem;
             }
@@ -277,13 +274,6 @@
                 bottom: 5rem; /* 小屏幕适中位置 */
                 left: 0.5rem;
                 right: 0.5rem;
-            }
-        }
-
-        /* 触摸设备检测 */
-        @media (hover: none) and (pointer: coarse) {
-            .mobile-controls {
-                display: flex !important;
             }
         }
 
@@ -457,8 +447,8 @@
                 </div>
             </div>
 
-            <!-- 调试信息 -->
-            <div id="debug-info" style="position: absolute; top: 80px; left: 5px; color: white; font-size: 10px; text-shadow: 1px 1px 2px black; pointer-events: none; z-index: 150; display: block;">
+            <!-- 调试信息 - 已隐藏 -->
+            <div id="debug-info" style="position: absolute; top: 80px; left: 5px; color: white; font-size: 10px; text-shadow: 1px 1px 2px black; pointer-events: none; z-index: 150; display: none;">
                 玩家: <span id="debug-player">0,0</span> | 相机: <span id="debug-camera">0</span> | 平台: <span id="debug-platforms">0</span><br>
                 按键: <span id="debug-keys">无</span>
             </div>
@@ -605,6 +595,12 @@
         function init() {
             resize();
             window.addEventListener('resize', resize);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => {
+                    resize();
+                    detectDeviceAndShowControls();
+                }, 100);
+            });
             window.addEventListener('blur', () => { for (let k in keys) keys[k] = false; });
             
             // 桌面端键盘控制
@@ -639,20 +635,32 @@
         }
 
         function detectDeviceAndShowControls() {
-            const isTouchDevice = ('ontouchstart' in window) || 
-                                 (navigator.maxTouchPoints > 0) || 
-                                 (navigator.msMaxTouchPoints > 0);
+            // 检测真实的移动设备
+            const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
             const isSmallScreen = window.innerWidth <= 768 || window.innerHeight <= 600;
-            const hasHover = window.matchMedia('(hover: hover)').matches;
-            const hasPointer = window.matchMedia('(pointer: fine)').matches;
             
-            // 只在真正的触摸设备或小屏幕上显示控制器
-            // 桌面端（有鼠标悬停和精确指针）不显示
-            if ((isTouchDevice || isSmallScreen) && !(hasHover && hasPointer && window.innerWidth > 768)) {
-                document.querySelector('.mobile-controls').style.display = 'flex';
-            } else {
-                document.querySelector('.mobile-controls').style.display = 'none';
+            // 桌面端检测 - 如果是大屏幕且没有触摸，肯定是桌面
+            const isDesktop = window.innerWidth > 1024 && window.innerHeight > 600 && !isTouchDevice;
+            
+            // 只在真正的移动设备上显示控制器
+            // 条件：(移动UA 或 触摸设备 或 小屏幕) 且 不是桌面
+            const shouldShowControls = (isMobileUA || (isTouchDevice && isSmallScreen)) && !isDesktop;
+            
+            const controlsElement = document.querySelector('.mobile-controls');
+            if (controlsElement) {
+                controlsElement.style.display = shouldShowControls ? 'flex' : 'none';
             }
+            
+            // 调试信息（可以注释掉）
+            console.log('Device detection:', {
+                isMobileUA,
+                isTouchDevice,
+                isSmallScreen,
+                isDesktop,
+                shouldShowControls,
+                screenSize: `${window.innerWidth}x${window.innerHeight}`
+            });
         }
 
         function setupTouch(id, code) {
